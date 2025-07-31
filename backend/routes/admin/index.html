@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>لوحة تحكم - ميمو برو</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet"/>
+</head>
+<body class="bg-gray-100 p-6">
+  <div class="max-w-7xl mx-auto">
+    <h1 class="text-3xl font-bold mb-6 text-center">لوحة تحكم الطلبات</h1>
+    <div id="orders" class="space-y-4">
+      <p class="text-center text-gray-500">جاري التحميل...</p>
+    </div>
+  </div>
+
+  <script>
+    async function loadOrders() {
+      try {
+        const res = await fetch('http://localhost:5000/api/orders');
+        const orders = await res.json();
+        const container = document.getElementById('orders');
+        container.innerHTML = '';
+
+        if (orders.length === 0) {
+          container.innerHTML = '<p class="text-center text-gray-500">لا توجد طلبات بعد.</p>';
+          return;
+        }
+
+        orders.forEach(order => {
+          const div = document.createElement('div');
+          div.className = 'bg-white p-6 rounded-xl shadow flex flex-col md:flex-row justify-between gap-4';
+          div.innerHTML = `
+            <div>
+              <h3 class="font-bold text-lg">${order.customerName}</h3>
+              <p><strong>الهاتف:</strong> ${order.phone}</p>
+              <p><strong>العنوان:</strong> ${order.address}</p>
+              <p><strong>الطلب:</strong> ${order.items.map(i => i.name).join(', ')}</p>
+              <p><strong>الملاحظات:</strong> ${order.notes || 'لا يوجد'}</p>
+              <p><strong>الوقت:</strong> ${new Date(order.createdAt).toLocaleString('ar-SA')}</p>
+            </div>
+            <div class="text-center">
+              <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold mb-2">${order.total} ر.س</div>
+              <select onchange="updateStatus('${order._id}', this.value)" class="border rounded p-2 w-full">
+                <option value="جديد" ${order.status === 'جديد' ? 'selected' : ''}>جديد</option>
+                <option value="قيد التحضير" ${order.status === 'قيد التحضير' ? 'selected' : ''}>قيد التحضير</option>
+                <option value="تم التوصيل" ${order.status === 'تم التوصيل' ? 'selected' : ''}>تم التوصيل</option>
+              </select>
+            </div>
+          `;
+          container.appendChild(div);
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function updateStatus(id, status) {
+      await fetch(`http://localhost:5000/api/orders/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      loadOrders();
+    }
+
+    window.onload = loadOrders;
+  </script>
+</body>
+</html>
